@@ -48,5 +48,5 @@ class CfitsioConan(ConanFile):
         pass
     
     def package_info(self):
-        self.cpp_info.libs = ["hello"]
+        self.cpp_info.libs = tools.collect_libs(self)
 

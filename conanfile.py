@@ -1,5 +1,5 @@
 from conans import ConanFile, CMake, tools
-
+import os
 
 class CfitsioConan(ConanFile):
     name = "cfitsio"
@@ -17,6 +17,8 @@ class CfitsioConan(ConanFile):
     requires = "libcurl/7.67.0"
 
     _sha256sums = {"3.470"  :"985606e058403c073a68d95be74e9696f0ded9414520784457a1d4cba8cca7e2"}
+
+    _source_subfolder = "source_subfolder"
     
     @property
     def file_version(self):
@@ -42,14 +44,13 @@ class CfitsioConan(ConanFile):
         cmake = CMake(self)
         cmake.definitions["CMAKE_TOOLCHAIN_FILE"] = "conan_paths.cmake"
         cmake.definitions["CMAKE_POSITION_INDEPENDENT_CODE"] = self.options.fPIC
-        cmake.configure(source_folder="%s-%s" % (self.name, self.file_version))
+        cmake.configure(source_folder=self._source_subfolder)
         return cmake
         
     def source(self):
-        SHA256SUM = self._sha256sums[self.version]
-        URL = "http://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/%s-%s.tar.gz" \
-              % (self.name, self.file_version)
-        tools.get(URL,sha256=SHA256SUM)
+        tools.get(**self.conan_data["sources"][self.version])
+        extracted_dir = "%s-%s" % (self.name, self.file_version)
+        os.rename(extracted_dir, self._source_subfolder)
         
     def build(self):
         cmake = self._configure_cmake()
@@ -58,7 +59,7 @@ class CfitsioConan(ConanFile):
     def package(self):
         cmake  = self._configure_cmake()
         cmake.install()
-        self.copy(pattern="Licence.txt", dst="licenses", src="%s-%s" % (self.name, self.file_version)) 
+        self.copy(pattern="Licence.txt", dst="licenses", src=self._source_subfolder) 
 
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)

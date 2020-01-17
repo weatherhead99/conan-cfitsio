@@ -4,17 +4,20 @@ from conans import ConanFile, CMake, tools
 class CfitsioConan(ConanFile):
     name = "cfitsio"
     version = "3.470"
-    license = "<Put the package license here>"
-    author = "<Put your name here> <And your email here>"
-    url = "<Package recipe repository url here, for issues about the package>"
-    description = "<Description of Cfitsio here>"
+    license = "ISC"
+    author = "Dan Weatherill (plasteredparrot@gmail.com)"
+    url = "https://github.com/weatherhead99/conan-cfitsio"
+    homepage = "https://heasarc.gsfc.nasa.gov/fitsio/"
+    description = "a library for reading and writing data files in FITS data format"
     topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False], "https_support" : [True, False]}
-    default_options = {"shared": False, "https_support" : True}
+    options = {"shared": [True, False], "fPIC": [True, False],  "https_support" : [True, False]}
+    default_options = "shared=False", "fPIC=True", "https_support=True"
     generators = "cmake_paths"
     requires = "libcurl/7.67.0"
 
+    _sha256sums = {"3.470"  :"985606e058403c073a68d95be74e9696f0ded9414520784457a1d4cba8cca7e2"}
+    
     @property
     def file_version(self):
         versparts = self.version.split(".")
@@ -25,28 +28,38 @@ class CfitsioConan(ConanFile):
         #https support only available on non-windows platforms
         if self.settings.os == "Windows":
             del self.options.https_support
+
+        #no fPIC on visual studio
+        if self.settings.compiler == "Visual Studio":
+            del self.options.fPIC
     
     def configure(self):
         #C only library
         del self.settings.compiler.libcxx
         del self.settings.compiler.cppstd
-    
+
+    def _configure_cmake(self):
+        cmake = CMake(self)
+        cmake.definitions["CMAKE_TOOLCHAIN_FILE"] = "conan_paths.cmake"
+        cmake.definitions["CMAKE_POSITION_INDEPENDENT_CODE"] = self.options.fPIC
+        cmake.configure(source_folder="%s-%s" % (self.name, self.file_version))
+        return cmake
+        
     def source(self):
-        SHA256SUM = "985606e058403c073a68d95be74e9696f0ded9414520784457a1d4cba8cca7e2"
+        SHA256SUM = self._sha256sums[self.version]
         URL = "http://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/%s-%s.tar.gz" \
               % (self.name, self.file_version)
         tools.get(URL,sha256=SHA256SUM)
         
     def build(self):
-        cmake = CMake(self)
-        cmake.definitions["CMAKE_TOOLCHAIN_FILE"] = "conan_paths.cmake"
-        cmake.configure(source_folder="%s-%s" % (self.name, self.file_version))
+        cmake = self._configure_cmake()
         cmake.build()
-        cmake.install()
         
     def package(self):
-        pass
-    
+        cmake  = self._configure_cmake()
+        cmake.install()
+        self.copy(pattern="Licence.txt", dst="licenses", src="%s-%s" % (self.name, self.file_version)) 
+
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)
 

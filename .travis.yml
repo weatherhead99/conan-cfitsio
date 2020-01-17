@@ -1,13 +1,1 @@
-dist: xenial
-language: generic
-
-branches:
-  only:
-    - master
-    - ci
-
-env:
-  - template=default
-
-script:
-  - source .travis.sh
+import: bincrafters/templates:.ci/travis-macos.yml@master
